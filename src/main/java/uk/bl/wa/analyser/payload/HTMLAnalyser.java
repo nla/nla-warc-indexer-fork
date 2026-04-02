@@ -126,7 +126,11 @@ public class HTMLAnalyser extends AbstractPayloadAnalyser {
         String[] links_list = metadata.getValues( HtmlFeatureParser.LINK_LIST );
         if( links_list != null ) {
             String lhost, ldomain, lsuffix;
-            for( String link : links_list ) {
+            for( String link : links_list ) {            
+                if (link.length() >2048) {         
+                  log.warn("Skip parsing link > 2048 characters. Link:"+link);
+                  continue;
+                }
                 lhost = LinkExtractor.extractHost( link );
                 if( !lhost.equals( LinkExtractor.MALFORMED_HOST ) ) {
                     hosts.add(lhost);
@@ -189,6 +193,10 @@ public class HTMLAnalyser extends AbstractPayloadAnalyser {
             String[] de = metadata.getValues( HtmlFeatureParser.DISTINCT_ELEMENTS );
             if( de != null ) {
                 for( String e : de ) {
+                    if (e != null && e.length() > 1024) {
+                        log.warn("elements_used field  > 1024 characters. Only first 1024 characters will be used. Value="+e );
+                        e=e.substring(0,1024);
+                    }
                     solr.addField( SolrFields.ELEMENTS_USED, e );
                 }
             }

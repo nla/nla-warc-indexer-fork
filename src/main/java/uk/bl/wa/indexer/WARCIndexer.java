@@ -334,7 +334,8 @@ public class WARCIndexer {
                     return solr;
                 }
 
-                solr.setField(SolrFields.SOLR_STATUS_CODE, httpHeader.getHttpStatus());
+                int status = parseHttpStatus(httpHeader.getHttpStatus());
+                solr.setField(SolrFields.SOLR_STATUS_CODE, ""+status);
 
                 // Skip recording non-content URLs (i.e. 2xx responses only please):
                 if(!checkResponseCode(httpHeader.getHttpStatus())) {
@@ -692,8 +693,13 @@ public class WARCIndexer {
                 if (h.getName().equalsIgnoreCase(HttpHeaders.SERVER))
                     solr.addField( SolrFields.SERVER, h.getValue() );
                 if (h.getName().equalsIgnoreCase(HttpHeaders.LOCATION)){
-                    String location = h.getValue(); //This can be relative and must be resolved full                  
-                       solr.setField(SolrFields.REDIRECT_TO_NORM,  Normalisation.resolveRelative(targetUrl, location));
+                    String location = h.getValue(); //This can be relative and must be resolved full
+                    String url_redirect=Normalisation.resolveRelative(targetUrl, location);
+                    if (url_redirect.length() > 2048) {
+                        log.warn("Redirect URL > 2048 character, using first 2048 characters only:"+url_redirect);
+                        url_redirect=url_redirect.substring(0,2048);                        
+                    }
+                    solr.setField(SolrFields.REDIRECT_TO_NORM,  url_redirect);
                 }
                                                
             }
@@ -846,6 +852,22 @@ public class WARCIndexer {
         return false;
     }
 
+    
+    /**
+     * In old arc files the http status was not always according to spec.
+     * A common error is "200Ok" instead of "200 OK" etc.
+     */
+    private int parseHttpStatus(String httpStatus) {
+        try {
+            int status = Integer.parseInt(httpStatus);
+            return status;
+            }
+        catch(Exception e) {
+         log.warn("Http status not integer:"+httpStatus);                        
+        }
+        return 200;
+    }
+    
     private boolean checkExclusionFilter( String uri ) {
         // Default to no exclusions:
         if( smef == null )
