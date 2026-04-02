@@ -28,8 +28,6 @@ RUN chmod +x /opt/scripts/*.sh && chown -R solr:solr /opt/scripts
 
 # Copy test data
 COPY solr-sample.json.gz /opt/scripts/
-COPY nlasolr-sample.json.gz /opt/scripts/
-
 
 USER solr
 

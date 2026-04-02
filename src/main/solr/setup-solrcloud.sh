@@ -4,9 +4,9 @@
 
 set -e
 
-echo "Setting up Soldfjhksnfjkdsnkjsdfnjklnjkl  rCloud..."
+echo "Setting up SolrCloud..."
 
-sleep 10
+sleep 120
 
 
 # Wait for ZooKeeper to be ready
@@ -69,11 +69,9 @@ echo "Discovery collection config: $DISCOVERY_CONFIG"
 # populate.sh - Load sample data into Solr (supports both standalone and SolrCloud)
 
 SOLR_URL=${SOLR_URL:-"http://solr9-node1:8983/solr/discovery"}
-NLASOLR_URL="http://solr9-node1:8983/solr/nla"
 SOLR_MODE=${SOLR_MODE:-"standalone"}
-DELAY=${DELAY:-10}
+DELAY=${DELAY:-30}
 DATA_FILE=${DATA_FILE:-"/opt/scripts/solr-sample.json.gz"}
-DATA_FILE2="/opt/scripts/nlasolr-sample.json.gz"
 
 echo "Populating Solr with sample data..."
 echo "Mode: ${SOLR_MODE}"
@@ -114,7 +112,7 @@ if [ -f "${DATA_FILE}" ]; then
         echo "Sample data loaded successfully!"
         
         # Show some stats
-        echo "Checking BADK document count..."
+        echo "Checking document count..."
         DOC_COUNT=$(curl -s "${SOLR_URL}/select?q=*:*&rows=0" | grep -o '"numFound":[0-9]*' | cut -d: -f2)
         echo "Documents indexed: ${DOC_COUNT:-"unknown"}"
     else
@@ -126,24 +124,4 @@ else
     exit 1
 fi
 
-# Load the sample data
-echo "Loading sample data from ${DATA_FILE2}..."
-if [ -f "${DATA_FILE2}" ]; then
-    echo "to ${NLASOLR_URL}"
-    gunzip -c "${DATA_FILE2}" | curl "${NLASOLR_URL}/update?commit=true" --data-binary @- -H "Content-type:application/json"
-    
-    if [ $? -eq 0 ]; then
-        echo "Sample data loaded successfully!"
-        
-        # Show some stats
-        echo "Checking nla document count..."
-        DOC_COUNT=$(curl -s "${NLASOLR_URL}/select?q=*:*&rows=0" | grep -o '"numFound":[0-9]*' | cut -d: -f2)
-        echo "Documents indexed: ${DOC_COUNT:-"unknown"}"
-    else
-        echo "ERROR: Failed to load sample data"
-        exit 1  
-    fi
-else
-    echo "ERROR: Sample data file ${DATA_FILE2} not found"
-    exit 1
-fi
+
