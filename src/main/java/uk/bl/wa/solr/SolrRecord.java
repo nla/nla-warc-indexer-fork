@@ -5,6 +5,7 @@ package uk.bl.wa.solr;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.*;
 import java.util.function.UnaryOperator;
@@ -90,8 +91,10 @@ public class SolrRecord implements Serializable {
         );
     }
 
-    public String toXml() {
-        return ClientUtils.toXML( doc );
+    public String toXml() throws IOException {
+        StringWriter sw = new StringWriter();
+        ClientUtils.writeXML( doc, sw );
+        return sw.toString();
     }
 
     /**

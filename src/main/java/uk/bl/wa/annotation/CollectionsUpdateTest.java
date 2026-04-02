@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
+import org.apache.solr.client.solrj.request.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.SolrParams;
@@ -44,7 +44,7 @@ public class CollectionsUpdateTest {
         String collections = "Health and Social Care Act 2012 - NHS Reforms"
                 + "|" + "NHS" + "|" + "Acute Trusts";
 
-        SolrClient ss = new HttpSolrClient.Builder(server).build();
+        SolrClient ss = new HttpJdkSolrClient.Builder(server).build();
 
         doQuery(ss, id);
 

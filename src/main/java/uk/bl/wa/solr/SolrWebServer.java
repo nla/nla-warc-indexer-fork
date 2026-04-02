@@ -1,19 +1,18 @@
 package uk.bl.wa.solr;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
-import org.apache.solr.client.solrj.impl.LBHttpSolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
+import org.apache.solr.client.solrj.request.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
@@ -81,22 +80,30 @@ public class SolrWebServer {
         // Setup based on options:
         if (opts.service.endpoint != null) {
             if (opts.service.endpoint.length == 1) {
-                log.info("Setting up HttpSolrServer client from a url: "
+                log.info("Setting up HttpJdkSolrClient from a url: "
                         + opts.service.endpoint[0]);
-                solrServer = new HttpSolrClient.Builder(opts.service.endpoint[0]).build();
+                solrServer = new HttpJdkSolrClient.Builder(opts.service.endpoint[0]).build();
             } else {
                 log.info(
-                        "Setting up LBHttpSolrServer client from servers list: "
-                                + opts.service.endpoint);
-                solrServer = new LBHttpSolrClient.Builder().withBaseSolrUrls(opts.service.endpoint).build();
+                        "Setting up CloudSolrClient (load-balanced) from servers list: "
+                                + Arrays.toString(opts.service.endpoint));
+                solrServer = new CloudSolrClient.Builder(Arrays.asList(opts.service.endpoint))
+                        .withParallelUpdates(true)
+                        .build();
             }
         } else {
-        	
-        	final List<String> zkHosts = Arrays.asList(opts.service.zk.zookeepers.split(","));
-            log.info("Setting up CloudSolrServer client via zookeepers: "+zkHosts);
-            solrServer = new CloudSolrClient.Builder(zkHosts, Optional.empty()).build();
-            ((CloudSolrClient) solrServer)
-                    .setDefaultCollection(opts.service.zk.collection);
+
+            final List<String> zkHosts = Arrays.asList(opts.service.zk.zookeepers.split(","));
+            log.info("Setting up CloudSolrClient via zookeepers: " + zkHosts);
+
+            solrServer = new CloudSolrClient.Builder(zkHosts, Optional.empty())
+                    .withDefaultCollection(opts.service.zk.collection)
+                    .withParallelUpdates(true)
+                    .withZkClientTimeout(30, TimeUnit.SECONDS)
+                    .withZkConnectTimeout(30, TimeUnit.SECONDS)
+                    .build();
+
+            log.info("CloudSolrClient configured with parallelUpdates=true, zkClientTimeout=30s, zkConnectTimeout=30s");
         }
 
         if (solrServer == null) {
@@ -115,23 +122,33 @@ public class SolrWebServer {
     public SolrWebServer(Config conf) {
 
         if( conf.hasPath(CONF_HTTP_SERVER)) {
-            log.info("Setting up HttpSolrServer client from a url: "+conf.getString(CONF_HTTP_SERVER));
-            solrServer = new HttpSolrClient.Builder(
+            log.info("Setting up HttpJdkSolrClient from a url: "+conf.getString(CONF_HTTP_SERVER));
+            solrServer = new HttpJdkSolrClient.Builder(
                     conf.getString(CONF_HTTP_SERVER)).build();
             
         } else if (conf.hasPath(CONF_ZOOKEEPERS)) {
-        	final List<String> zkHosts = Arrays.asList(conf.getString(CONF_ZOOKEEPERS).split(","));
-            log.info("Setting up CloudSolrServer client via zookeepers: "+zkHosts);
-            solrServer = new CloudSolrClient.Builder(zkHosts, Optional.empty()).build();
-            ((CloudSolrClient) solrServer)
-                    .setDefaultCollection(conf
-                    .getString(COLLECTION));
-            
+            final List<String> zkHosts = Arrays.asList(conf.getString(CONF_ZOOKEEPERS).split(","));
+            log.info("Setting up CloudSolrClient via zookeepers: "+zkHosts);
+
+            solrServer = new CloudSolrClient.Builder(zkHosts, Optional.empty())
+                    .withDefaultCollection(conf.getString(COLLECTION))
+                    .withHttpClientBuilder(
+                            new HttpJdkSolrClient.Builder()
+                                    .withConnectionTimeout(30000, TimeUnit.MILLISECONDS)
+                                    .withRequestTimeout(120000, TimeUnit.MILLISECONDS))
+                    .withParallelUpdates(true)
+                    .withZkClientTimeout(30, TimeUnit.SECONDS)
+                    .withZkConnectTimeout(30, TimeUnit.SECONDS)
+                    .build();
+
+            log.info("CloudSolrClient configured with parallelUpdates=true, requestTimeout=120s, connectionTimeout=30s");
+
         } else if (conf.hasPath(CONF_HTTP_SERVERS)) {
-            log.info("Setting up LBHttpSolrServer client from servers list.");
-            solrServer = new LBHttpSolrClient.Builder().withBaseSolrUrls(
-                    conf.getString(
-                    CONF_HTTP_SERVERS).split(",")).build();
+            log.info("Setting up CloudSolrClient (load-balanced) from servers list.");
+            solrServer = new CloudSolrClient.Builder(
+                    Arrays.asList(conf.getString(CONF_HTTP_SERVERS).split(",")))
+                    .withParallelUpdates(true)
+                    .build();
             
         } else {
             log.error("No valid SOLR config found.");

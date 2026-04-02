@@ -48,9 +48,9 @@ import org.apache.commons.httpclient.URIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
+import org.apache.solr.client.solrj.request.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrDocument;
@@ -367,7 +367,7 @@ public class Annotator {
             String solrServer) throws SolrServerException, URISyntaxException,
             IOException {
         // Connect to solr:
-        SolrClient solr = new HttpSolrClient.Builder(solrServer).build();
+        SolrClient solr = new HttpJdkSolrClient.Builder(solrServer).build();
 
         // Set up annotator:
         Annotator anr = new Annotator(ann, oaSurts);
