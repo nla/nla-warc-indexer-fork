@@ -2,32 +2,19 @@ FROM solr:9
 
 USER root
 
-# Install required packages for SolrCloud setup
+# Install gunzip so we can populate the system with test data:
 RUN set -ex; \
   apt-get update; \
-  apt-get -y install gzip netcat-openbsd curl; \
+  apt-get -y install gzip; \
   rm -rf /var/lib/apt/lists/*;
 
-# Install ICU analysis contrib module for ICUFoldingFilterFactory and ICUTransformFilterFactory
-RUN set -ex; \
-  cp /opt/solr/contrib/analysis-extras/lib/icu4j-*.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/; \
-  cp /opt/solr/contrib/analysis-extras/lib/lucene-analysis-icu-*.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/;
+# Add a collection with our schema:
+ADD solr9 /var/solr/data/webarchive
+RUN chown -R solr /var/solr/data/webarchive
 
-# Copy configuration files for SolrCloud (configs will be uploaded to ZooKeeper)
-COPY solr9/nla/conf /opt/solr-config/nla/conf
-COPY solr9/discovery/conf /opt/solr-config/discovery/conf
-RUN chown -R solr:solr /opt/solr-config
-
-# Add custom JAR files
-COPY nla-solr-ext.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/
-
-# Add initialization and population scripts
-COPY populate.sh /opt/scripts/
-COPY setup-solrcloud.sh /opt/scripts/
-RUN chmod +x /opt/scripts/*.sh && chown -R solr:solr /opt/scripts
-
-# Copy test data
-COPY solr-sample.json.gz /opt/scripts/
+# Add in test data support:
+COPY solr-sample.json.gz /
+COPY populate.sh /
 
 USER solr
 

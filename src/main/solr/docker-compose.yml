@@ -1,96 +1,31 @@
+version: "3.3"
+
 services:
 
-  # ZooKeeper for SolrCloud coordination
-  zookeeper:
-    image: zookeeper:3.8
-    container_name: warc-zookeeper
-    hostname: zookeeper
+  # Solr instance for running tests against
+  solr:
+    build:
+      context: .
+      args:
+        - "http_proxy=${HTTP_PROXY}"
+        - "https_proxy=${HTTPS_PROXY}"
     ports:
-      - "2181:2181"
-    environment:
-      ZOO_MY_ID: 1 
-      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
-      ZOO_4LW_COMMANDS_WHITELIST: mntr,conf,ruok
-    networks:
-      - solr-network
+      - "18983:8983"
 
-  # SolrCloud Node 1
-  solr9-node1:
+  solr9:
     build:
       context: .
       dockerfile: Dockerfile9
       args:
         - "http_proxy=${HTTP_PROXY}"
         - "https_proxy=${HTTPS_PROXY}"
-    container_name: warc-solr9-node1
-    hostname: solr9-node1
     ports:
       - "38983:8983"
+
+  # Hook to populate the image with test data:
+  populate:
+    build: .
+    command: "/populate.sh"
     environment:
-      - ZK_HOST=zookeeper:2181
-      - SOLR_HOST=solr9-node1
-      - SOLR_HEAP=1g
-    depends_on:
-      - zookeeper
-    networks:
-      - solr-network
-    command: >
-      bash -c "
-        echo 'Waiting for ZooKeeper...'
-        while ! nc -z zookeeper 2181; do sleep 1; done
-        echo 'Starting SolrCloud...'
-        solr-foreground -c -z zookeeper:2181
-      "
-
-  # SolrCloud Node 2
-  solr9-node2:
-    build:
-      context: .
-      dockerfile: Dockerfile9
-      args:
-        - "http_proxy=${HTTP_PROXY}"
-        - "https_proxy=${HTTPS_PROXY}"
-    container_name: warc-solr9-node2
-    hostname: solr9-node2
-    ports:
-      - "39983:8983"
-    environment:
-      - ZK_HOST=zookeeper:2181
-      - SOLR_HOST=solr9-node2
-      - SOLR_HEAP=1g
-    depends_on:
-      - zookeeper
-    networks:
-      - solr-network
-    command: >
-      bash -c "
-        echo 'Waiting for ZooKeeper...'
-        while ! nc -z zookeeper 2181; do sleep 1; done
-        echo 'Starting SolrCloud...'
-        solr-foreground -c -z zookeeper:2181
-      "
-
-  # SolrCloud setup service - uploads configs and creates collections
-  solr-setup:
-    build:
-      context: .
-      dockerfile: Dockerfile9
-      args:
-        - "http_proxy=${HTTP_PROXY}"
-        - "https_proxy=${HTTPS_PROXY}"
-    container_name: warc-solr-setup
-    depends_on:
-      - solr9-node1
-      - solr9-node2
-    environment:
-      - ZK_HOST=zookeeper:2181
-    networks:
-      - solr-network
-    command: "/opt/scripts/setup-solrcloud.sh"
-
-
-
-networks:
-  solr-network:
-    driver: bridge
+      - "SOLR_URL=http://solr:8983/solr/discovery"
 
