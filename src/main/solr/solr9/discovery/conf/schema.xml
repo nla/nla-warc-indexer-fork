@@ -173,7 +173,7 @@ This schema is for Solr 7+ and will not work under Solr 6.
              Note: This field has very high cardinality (a little less than the number of documents in the index).
              Faceting should be done with care and is likely to fail with an OutOfMemoryException on a large index
              using stock Solr. This problem is being worked on by Toke Eskildsen - toes@kb.dk -->
-        <field name="site"                  type="string" />
+        <field name="url"                  type="string" />
         <!-- Possible values: normal, robots.txt and slashpage (root page for the domain).
              Sample use: Search only for root pages with q=url_type:slashpage -->
         <field name="url_type"             type="string" />
